@@ -3,6 +3,16 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+#pycharm
+.idea/
+
+#logs airflow
+logs/
+
+#test files
+tests/
+
+
 # C extensions
 *.so
 
