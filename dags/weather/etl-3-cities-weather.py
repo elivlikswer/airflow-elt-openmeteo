@@ -11,6 +11,7 @@ from pathlib import Path
 
 #base_var
 DAG_ID = Path(__file__).stem.lower()
+CSV_STORAGE_DIR = '/tmp/airflow_weather'
 
 
 #func
@@ -63,10 +64,14 @@ def pandas_load_csv(ti,logical_date=None):
                 'status':metrics[2]
             }
         )
+
     df = pd.DataFrame(flat_data)
     ds = logical_date.strftime('%Y=%m-%d')
-    df.to_csv(f'weather_csv_{ds}',index=False)
-    return df
+    filename=f'weather_csv_{ds}'
+    filepath = Path(CSV_STORAGE_DIR) / filename
+    Path(CSV_STORAGE_DIR).mkdir(parents=True,exist_ok=True)
+    df.to_csv(filepath,index=False)
+    return str(filepath)
 
 #report
 def log_report_weather(ti):
@@ -74,8 +79,11 @@ def log_report_weather(ti):
     print('     DAILY REPORT FOR WEATHER      ')
     print('='*40)
 
-    df = ti.xcom_pull(task_ids='load_all')
-    print(df.to_string(index=False))
+    csv_path = ti.xcom_pull(task_ids='load_all')
+
+    df = pd.read_csv(csv_path,encoding='utf-8')
+
+    print(df.to_string())
 
     print('='*40)
     print(f'Total cities processed: {len(df)}')
