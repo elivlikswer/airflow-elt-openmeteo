@@ -20,7 +20,6 @@ ETL-пайплайн на Apache Airflow для получения, обрабо
 1. Клонируй репозиторий:
 ```bashgit
 clone https://github.com/elivlikswer/airflow-elt-openmeteo.git
-cd airflow-pet-project
 ```
 2. Создай файл .env:
 ```bashecho 
@@ -62,7 +61,7 @@ http://localhost:8080
  
 **`api_url`** — шаблон URL запроса:
 ```
-/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true
+/v1/forecast?latitude={lat}&longitude={lon}&&current_weather=true
 ```
 
 ## Пример вывода
