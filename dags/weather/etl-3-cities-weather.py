@@ -11,7 +11,7 @@ from pathlib import Path
 
 #base_var
 DAG_ID = Path(__file__).stem.lower()
-CSV_STORAGE_DIR = '/tmp/airflow_weather'
+CSV_STORAGE_DIR = '/opt/airflow/logs/weather_reports'
 
 
 #func
@@ -66,7 +66,7 @@ def pandas_load_csv(ti,logical_date=None):
         )
 
     df = pd.DataFrame(flat_data)
-    ds = logical_date.strftime('%Y=%m-%d')
+    ds = logical_date.strftime('%Y-%m-%d')
     filename=f'weather_csv_{ds}'
     filepath = Path(CSV_STORAGE_DIR) / filename
     Path(CSV_STORAGE_DIR).mkdir(parents=True,exist_ok=True)
