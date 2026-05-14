@@ -14,52 +14,31 @@ DAG_ID = Path(__file__).stem.lower()
 
 
 #func
-def extract_config_cities(city_name):
-    cities_config = Variable.get('data', deserialize_json=True)
-    return  cities_config[city_name]['lat'],cities_config[city_name]['lon']
+def extract_config_cities(city):
+    city_config = Variable.get('data', deserialize_json=True)
+    return  city_config[city]['lat'],city_config[city]['lon']
 
 
 def get_temp_from_api(lat: str, lon:str):
     temp_api_url = Variable.get('api_url')
-    print('temp_api_url: ',temp_api_url)
     api_url = temp_api_url.format(lat=lat,lon=lon)
-    print('Api URL is ',api_url)
     hook = HttpHook(http_conn_id='open_meteo',method='GET')
     response = hook.run(api_url)
     return response.json()
 
 
 #extract
-def extract_sydney():
-    city = 'Sydney'
-    lat, lon = extract_config_cities(city)
-    print(lat,lon)
-    data = get_temp_from_api(lat,lon)
-    temp = data['current_weather']['temperature']
-    return city,temp
-
-def extract_london():
-    city = 'London'
-    lat, lon = extract_config_cities(city)
-    print(lat,lon)
-    data = get_temp_from_api(lat, lon)
-    temp = data['current_weather']['temperature']
-    return city,temp
-
-def extract_tokyo():
-    city = 'Tokyo'
-    lat, lon = extract_config_cities(city)
-    print(lat,lon)
-    data = get_temp_from_api(lat, lon)
-    temp = data['current_weather']['temperature']
+def extract_cities(city):
+    lat,lon = extract_config_cities(city)
+    temp = get_temp_from_api(lat,lon)['current_weather']['temperature']
     return city,temp
 
 #transform:
 #{city_name: [temp,f_temp,status]}...
 
-def transform_all(ti):
+def transform_all(extract_task_ids,ti):
     total_data = {}
-    for city, temp in ti.xcom_pull(task_ids=['extract_sydney', 'extract_tokyo', 'extract_london']):
+    for city, temp in ti.xcom_pull(task_ids=extract_task_ids):
         fahrenheit = (temp*1.8)+32
         if temp < 10:
             status = 'cold'
@@ -116,24 +95,24 @@ with DAG(
     end = EmptyOperator(task_id='end')
 
     #python
-    task_extract_sydney = PythonOperator(
-        task_id='extract_sydney',
-        python_callable=extract_sydney
-    )
+    CITIES = list(Variable.get('data',deserialize_json=True).keys())
 
-    task_extract_tokyo = PythonOperator(
-        task_id='extract_tokyo',
-        python_callable=extract_tokyo
-    )
+    extract_tasks = []
+    extract_tasks_ids = []
+    for city in CITIES:
+        task = PythonOperator(
+            task_id=f'extract_{city.lower()}',
+            python_callable=extract_cities,
+            op_args=[city]
+        )
+        extract_tasks.append(task)
+        extract_tasks_ids.append(task.task_id)
 
-    task_extract_london = PythonOperator(
-        task_id='extract_london',
-        python_callable=extract_london
-    )
 
     task_transform_all = PythonOperator(
         task_id='transform_all',
-        python_callable=transform_all
+        python_callable=transform_all,
+        op_kwargs={'extract_task_ids': extract_tasks_ids}
     )
 
     task_load_all = PythonOperator(
@@ -146,4 +125,4 @@ with DAG(
         python_callable=log_report_weather
     )
 
-    start>>[task_extract_sydney,task_extract_tokyo,task_extract_london]>>task_transform_all>>task_load_all>>task_report_log>>end
+    start>>extract_tasks>>task_transform_all>>task_load_all>>task_report_log>>end
