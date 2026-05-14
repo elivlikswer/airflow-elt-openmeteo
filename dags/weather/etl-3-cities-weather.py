@@ -11,19 +11,11 @@ from pathlib import Path
 
 #base_var
 DAG_ID = Path(__file__).stem.lower()
-cities_config = None
-
 
 
 #func
 def extract_config_cities(city_name):
-    """
-    Checks for Empty config variable, is it's - load from Airflow only once. Then just return lat and lon by the specified city
-    """
-    global cities_config
-    if cities_config is None:
-        cities_config = Variable.get('data', deserialize_json=True)
-
+    cities_config = Variable.get('data', deserialize_json=True)
     return  cities_config[city_name]['lat'],cities_config[city_name]['lon']
 
 
